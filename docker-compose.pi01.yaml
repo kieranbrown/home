@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  autoheal:
+    container_name: autoheal
+    image: willfarrell/autoheal:1.2.0
+    restart: unless-stopped
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared
+    restart: unless-stopped
+    command: proxy-dns --address 0.0.0.0 --port 5053
+    environment:
+      TZ: Europe/London
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole
+    restart: unless-stopped
+    entrypoint:
+      - bash
+      - -c
+      - | # this forces all return traffic on 192.168.3.0/24 through the gateway
+        ip route add 192.168.1.0/24 via 192.168.1.1 table 99
+        ip rule add from 192.168.3.0/24 table 99
+        /s6-init
+    hostname: pihole01
+    domainname: localdomain
+    mac_address: 02:42:c0:a8:01:02
+    dns: 127.0.0.1
+    environment:
+      BLOCK_ICLOUD_PR: 'true'
+      DNSMASQ_LISTENING: all
+      FTLCONF_LOCAL_IPV4: 192.168.1.2
+      PIHOLE_DNS_: cloudflared#5053
+      REV_SERVER: 'true'
+      REV_SERVER_CIDR: 192.168.1.0/24
+      REV_SERVER_TARGET: 192.168.1.1
+      REV_SERVER_DOMAIN: localdomain
+      TZ: Europe/London
+      WEBPASSWORD: $PIHOLE_PASSWORD
+    networks:
+      default:
+      macvlan0:
+        ipv4_address: 192.168.1.2
+      macvlan3:
+        ipv4_address: 192.168.3.2
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /data/docker/pihole/etc-pihole:/etc/pihole
+      - /data/docker/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+
+  # uisp:
+  #   container_name: uisp
+  #   image: nico640/docker-unms
+  #   restart: unless-stopped
+  #   environment:
+  #     TZ: Europe/London
+  #   ports:
+  #     - 80:80/tcp
+  #     - 443:443/tcp
+  #     - 2055:2055/udp
+  #   volumes:
+  #     - /data/docker/uisp/config:/config
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    environment:
+      TZ: Europe/London
+      WATCHTOWER_SCHEDULE: 0 0 4 * * MON
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  macvlan0:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
+          ip_range: 192.168.1.0/24
+  macvlan3:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.3
+    ipam:
+      config:
+        - subnet: 192.168.3.0/24
+          gateway: 192.168.3.1
+          ip_range: 192.168.3.0/24

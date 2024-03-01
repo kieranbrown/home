@@ -1,0 +1,16 @@
+{
+  "files.associations": {
+    "docker-compose.*.yaml": "dockercompose"
+  },
+  "vsicons.associations.files": [
+    {
+      "extensions": [
+        "docker-compose.nas.yaml",
+        "docker-compose.pi01.yaml"
+      ],
+      "filename": true,
+      "icon": "docker",
+      "format": "FileFormat.svg"
+    }
+  ]
+}

@@ -1,0 +1,383 @@
+version: "3.9"
+
+services:
+  autoheal:
+    container_name: autoheal
+    image: willfarrell/autoheal:1.2.0
+    restart: unless-stopped
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared
+    restart: unless-stopped
+    command: proxy-dns --address 0.0.0.0 --port 5053
+    environment:
+      TZ: Europe/London
+
+  cloudflared-argo:
+    container_name: cloudflared-argo
+    image: cloudflare/cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: $TUNNEL_TOKEN
+      TZ: Europe/London
+
+  gluetun:
+    container_name: gluetun
+    image: qmcgaw/gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      # See https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers
+      - VPN_SERVICE_PROVIDER
+      - VPN_TYPE
+      - OPENVPN_USER
+      - OPENVPN_PASSWORD
+      - WIREGUARD_PUBLIC_KEY
+      - WIREGUARD_PRIVATE_KEY
+      - WIREGUARD_PRESHARED_KEY
+      - WIREGUARD_ADDRESSES
+      - SERVER_COUNTRIES=Netherlands
+      - FIREWALL_OUTBOUND_SUBNETS=172.18.0.0/24,192.168.1.0/24
+      - FIREWALL_VPN_INPUT_PORTS=46654
+      - FREE_ONLY=on # protonvpn only
+      - TZ=Europe/London
+    extra_hosts:
+      - qbittorrent:127.0.0.1
+      - radarr:172.18.0.253
+      - rdtclient:172.18.0.251
+      - sonarr:172.18.0.254
+    networks:
+      default:
+        ipv4_address: 172.18.0.252
+
+  # grafana-agent:
+  #   container_name: grafana-agent
+  #   image: grafana/agent
+  #   user: root
+  #   devices:
+  #     - /dev/kmsg
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /volume2/docker/grafana-agent/data:/etc/agent/data
+  #     - /volume2/docker/grafana-agent/config.yaml:/etc/agent/agent.yaml
+  #     # additions
+  #     - /volume2/@docker:/var/lib/docker:ro
+  #     - /:/rootfs:ro
+  #     - /var/run:/var/run:rw
+  #     - /sys:/sys:ro
+
+  # homarr:
+  #   container_name: homarr
+  #   image: ghcr.io/ajnart/homarr
+  #   restart: unless-stopped
+  #   extra_hosts:
+  #     - qbittorrent:172.18.0.252
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock # Optional, only if you want docker integration
+  #     - /volume2/docker/homarr/configs:/app/data/configs
+  #     - /volume2/docker/homarr/icons:/app/public/icons
+  #     - /volume2/docker/homarr/data:/data
+
+  # home-assistant:
+  #   container_name: home-assistant
+  #   image: homeassistant/home-assistant
+  #   restart: unless-stopped
+  #   environment:
+  #     TZ: Europe/London
+  #   extra_hosts:
+  #     - host.docker.internal:172.18.0.1
+  #   volumes:
+  #     - /volume2/docker/home-assistant/config:/config
+
+  orbital-sync:
+    container_name: orbital-sync
+    image: mattwebbio/orbital-sync:1
+    restart: unless-stopped
+    environment:
+      PRIMARY_HOST_BASE_URL: http://192.168.1.2
+      PRIMARY_HOST_PASSWORD: $PIHOLE_PASSWORD
+      SECONDARY_HOST_1_BASE_URL: http://pihole
+      SECONDARY_HOST_1_PASSWORD: $PIHOLE_PASSWORD
+      INTERVAL_MINUTES: 5
+
+  overseerr:
+    container_name: overseerr
+    image: sctx/overseerr
+    restart: unless-stopped
+    user: 1027:100
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=Europe/London
+    volumes:
+      - /volume2/docker/overseerr/config:/app/config
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole
+    restart: unless-stopped
+    entrypoint:
+      - bash
+      - -c
+      - | # this forces all return traffic on 192.168.3.0/24 through the gateway
+        ip route add 192.168.1.0/24 via 192.168.1.1 table 99
+        ip rule add from 192.168.3.0/24 table 99
+        /s6-init
+    hostname: pihole02
+    domainname: localdomain
+    mac_address: 02:42:c0:a8:01:03
+    dns: 127.0.0.1
+    environment:
+      BLOCK_ICLOUD_PR: 'true'
+      DNSMASQ_LISTENING: all
+      FTLCONF_LOCAL_IPV4: 192.168.1.3
+      PIHOLE_DNS_: cloudflared#5053
+      REV_SERVER: 'true'
+      REV_SERVER_CIDR: 192.168.1.0/24
+      REV_SERVER_TARGET: 192.168.1.1
+      REV_SERVER_DOMAIN: localdomain
+      TZ: Europe/London
+      WEBPASSWORD: $PIHOLE_PASSWORD
+    networks:
+      default:
+      macvlan0:
+        ipv4_address: 192.168.1.3
+      macvlan3:
+        ipv4_address: 192.168.3.3
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /volume2/docker/pihole/etc-pihole:/etc/pihole
+      - /volume2/docker/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    restart: unless-stopped
+    environment:
+      ADVERTISE_IP: http://192.168.1.10:32400
+      ALLOWED_NETWORKS: 172.18.0.0/24,192.168.1.0/24
+      PLEX_UID: 1027
+      PLEX_GID: 100
+      PLEX_CLAIM: $PLEX_CLAIM
+      TZ: Europe/London
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      default:
+      macvlan0:
+        ipv4_address: 192.168.1.10
+    volumes:
+      - /volume2/docker/plex/config:/config
+      - /volume1/media/transcode:/transcode
+      - /volume1/media/films:/films
+      - /volume1/media/tv:/tv
+
+  plexautoskip:
+    container_name: plexautoskip
+    image: mdhiggins/plexautoskip-docker
+    restart: unless-stopped
+    environment:
+      PUID: 1027
+      PGID: 100
+      TZ: Europe/London
+    volumes:
+      - /volume2/docker/plexautoskip/config:/config
+
+  plextraktsync:
+    container_name: plextraktsync
+    image: ghcr.io/taxel/plextraktsync
+    restart: on-failure:2
+    command: sync
+    volumes:
+      - /volume2/docker/plextraktsync/config:/app/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Tallinn
+
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:nightly
+    restart: unless-stopped
+    network_mode: service:gluetun
+    environment:
+      - PUID=1027
+      - PGID=100
+      - TZ=Europe/London
+    volumes:
+      - /volume2/docker/prowlarr/config:/config
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: curl -sf https://google.com  || exit 1
+      interval: 1m
+      timeout: 10s
+      retries: 1
+
+  # pyload:
+  #   container_name: pyload
+  #   image: lscr.io/linuxserver/pyload-ng
+  #   restart: unless-stopped
+  #   environment:
+  #     - PUID=1027
+  #     - PGID=100
+  #     - TZ=Europe/London
+  #   volumes:
+  #     - /volume2/docker/pyload/config:/config
+  #     - /volume1/media/downloads:/data/downloads
+
+  # qbittorrent:
+  #   container_name: qbittorrent
+  #   image: lscr.io/linuxserver/qbittorrent
+  #   restart: unless-stopped
+  #   network_mode: service:gluetun
+  #   environment:
+  #     - PUID=1027
+  #     - PGID=100
+  #     - TZ=Europe/London
+  #     - WEBUI_PORT=8080
+  #     - DOCKER_MODS=arafatamim/linuxserver-io-mod-vuetorrent
+  #   volumes:
+  #     - /volume2/docker/qbittorrent/config:/config
+  #     - /volume1/media/downloads:/downloads
+  #   depends_on:
+  #     gluetun:
+  #       condition: service_healthy
+  #       restart: true
+  #   healthcheck:
+  #     test: curl -sf https://google.com  || exit 1
+  #     interval: 1m
+  #     timeout: 10s
+  #     retries: 1
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1027
+      - PGID=100
+      - TZ=Europe/London
+    extra_hosts:
+      - prowlarr:172.18.0.252
+      - qbittorrent:172.18.0.252
+    networks:
+      default:
+        ipv4_address: 172.18.0.253
+    volumes:
+      - /volume2/docker/radarr/config:/config
+      - /volume1/media:/data
+      - /volume1/scripts/qbittorrent-trackers.sh:/scripts/qbittorrent-trackers.sh
+
+  recyclarr:
+    container_name: recyclarr
+    image: ghcr.io/recyclarr/recyclarr
+    restart: unless-stopped
+    user: 1027:100
+    environment:
+      - TZ=Europe/London
+    volumes:
+      - /volume2/docker/recyclarr/config:/config
+
+  rdtclient:
+    container_name: rdtclient
+    image: rogerfar/rdtclient
+    restart: unless-stopped
+    environment:
+      - PUID=1027
+      - PGID=100
+    volumes:
+      - /volume1/media/downloads:/data/downloads
+      - /volume2/docker/rdtclient/data:/data/db
+    networks:
+      default:
+        ipv4_address: 172.18.0.251
+
+  scheduler:
+    container_name: scheduler
+    image: mcuadros/ofelia
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      ofelia.job-run.plextraktsync.schedule: "@every 6h"
+      ofelia.job-run.plextraktsync.container: "plextraktsync"
+    depends_on:
+      - plextraktsync
+
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr:develop
+    restart: unless-stopped
+    volumes:
+      - /volume2/docker/sonarr/config:/config
+      - /volume1/media:/data
+      - /volume1/scripts/qbittorrent-trackers.sh:/scripts/qbittorrent-trackers.sh
+    extra_hosts:
+      - prowlarr:172.18.0.252
+      - qbittorrent:172.18.0.252
+    networks:
+      default:
+        ipv4_address: 172.18.0.254
+    environment:
+      - PUID=1027
+      - PGID=100
+      - TZ=Europe/London
+
+  # tautulli:
+  #   container_name: tautulli
+  #   image: tautulli/tautulli
+  #   restart: unless-stopped
+  #   environment:
+  #     PUID: 1027
+  #     PGID: 100
+  #     TZ: Europe/London
+  #   volumes:
+  #     - /volume2/docker/tautulli/config:/config
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    environment:
+      TZ: Europe/London
+      WATCHTOWER_SCHEDULE: 0 0 5 * * MON
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+# this is only required due to a gluetun networking issue
+# https://github.com/qdm12/gluetun/issues/281
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/24
+          gateway: 172.18.0.1
+  macvlan0:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
+          ip_range: 192.168.1.0/24
+  macvlan3:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.3
+    ipam:
+      config:
+        - subnet: 192.168.3.0/24
+          gateway: 192.168.3.1
+          ip_range: 192.168.3.0/24
