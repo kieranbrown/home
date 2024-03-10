@@ -48,6 +48,7 @@ services:
       default:
       macvlan0:
         ipv4_address: 192.168.1.2
+        priority: 1 # connect before macvlan3
       macvlan3:
         ipv4_address: 192.168.3.2
     cap_add:
