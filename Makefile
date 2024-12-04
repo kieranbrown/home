@@ -42,7 +42,7 @@ start-docker-desktop: ## Start the Docker Desktop process
 			;; \
 	esac
 
-	@$(MAKE) wait-for-docker
+	@$(MAKE) -s wait-for-docker
 
 .PHONE: wait-for-docker
 wait-for-docker: ## Wait for the docker command to be come available
