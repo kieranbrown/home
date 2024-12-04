@@ -1,3 +1,5 @@
+export DOCKER_CONTEXT := pi
+
 #
 #--------------------------------------------------------------------------
 ##@ Help
@@ -26,9 +28,26 @@ deploy: ## Deploy the docker stack
 #
 .PHONY: start-docker-desktop
 start-docker-desktop: ## Start the Docker Desktop process
-	powershell.exe -Command "Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'"
+	@case "$$(uname -sr)" in \
+		Darwin*) \
+			echo "Mac detected. Starting Docker Desktop..."; \
+			open -a Docker; \
+			;; \
+		Linux*WSL*) \
+			echo "WSL detected. Starting Docker Desktop..."; \
+			powershell.exe -Command "Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'"; \
+			;; \
+		*) \
+			echo "Could not detect OS. Please start Docker Desktop manually"; \
+			;; \
+	esac
+
+	@$(MAKE) wait-for-docker
+
+.PHONE: wait-for-docker
+wait-for-docker: ## Wait for the docker command to be come available
 	@echo "Waiting for Docker Desktop to start..."
-	@while ! docker.exe info > /dev/null 2>&1; do \
+	@while ! docker info > /dev/null 2>&1; do \
 		echo "Docker is not ready. Retrying in 5 seconds..."; \
 		sleep 5; \
 	done
@@ -37,5 +56,3 @@ start-docker-desktop: ## Start the Docker Desktop process
 .PHONY: create-docker-context
 create-docker-context: ## Create the Docker context to communicate with the Raspberry Pi
 	@docker context create pi --description "Raspberry Pi" --docker "host=ssh://pi@192.168.1.2" || true
-	@echo "Switching context to pi"
-	@docker context use pi > /dev/null 2>&1
