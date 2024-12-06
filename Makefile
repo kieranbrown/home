@@ -18,7 +18,7 @@ help: ## Print this help with list of available commands/targets and their purpo
 #
 .PHONY: deploy
 deploy-docker: ## Deploy the docker stack
-	@docker compose up -d --pull=always
+	@docker compose up -d
 
 .PHONY: deploy
 deploy-terraform: ## Deploy the terraform stack
@@ -42,8 +42,8 @@ bootstrap-tf: bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspace
 bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform workspace
 	@dcli sync
 	@echo 'cloudflare_api_token = "$(shell dcli read dl://cloudflare_api_token/content)"' > terraform/cloudflare-apps/provider.auto.tfvars
-	@terraform -chdir=terraform/cloudflare-apps init -backend-config access_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
-
+	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
+	@echo 'TUNNEL_TOKEN=$(shell terraform -chdir=terraform/cloudflare-apps output -raw tunnel_token)' > .env
 #
 #--------------------------------------------------------------------------
 ##@ Miscellaneous
