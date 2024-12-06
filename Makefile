@@ -1,5 +1,7 @@
 export DOCKER_CONTEXT := pi
 
+DASHLANE_TFSTATE_ID = 246CBCB3-BA34-4369-8BD4-D43DCD8F57BC
+
 #
 #--------------------------------------------------------------------------
 ##@ Help
@@ -11,15 +13,36 @@ help: ## Print this help with list of available commands/targets and their purpo
 
 #
 #--------------------------------------------------------------------------
-##@ Commands
+##@ Deploy Commands
+#--------------------------------------------------------------------------
+#
+.PHONY: deploy
+deploy-docker: ## Deploy the docker stack
+	@docker compose up -d --pull=always
+
+.PHONY: deploy
+deploy-terraform: ## Deploy the terraform stack
+	@terraform -chdir=terraform/cloudflare-apps apply
+
+#
+#--------------------------------------------------------------------------
+##@ Bootstrapping
 #--------------------------------------------------------------------------
 #
 .PHONY: bootstrap
-bootstrap: start-docker-desktop create-docker-context ## Bootstrap the environment
+bootstrap: bootstrap-docker bootstrap-tf ## Bootstrap the environment
 
-.PHONY: deploy
-deploy: ## Deploy the docker stack
-	@docker compose up -d --pull=always
+.PHONY: bootstrap-docker
+bootstrap-docker: start-docker-desktop create-docker-context ## Bootstrap the Docker environment
+
+.PHONY: bootstrap-tf
+bootstrap-tf: bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
+
+.PHONY: bootstrap-tf-cloudflare-apps
+bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform workspace
+	@dcli sync
+	@echo 'cloudflare_api_token = "$(shell dcli read dl://cloudflare_api_token/content)"' > terraform/cloudflare-apps/provider.auto.tfvars
+	@terraform -chdir=terraform/cloudflare-apps init -backend-config access_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$(shell dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
 
 #
 #--------------------------------------------------------------------------
