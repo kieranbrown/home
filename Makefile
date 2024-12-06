@@ -33,7 +33,7 @@ deploy-terraform: ## Deploy the terraform stack
 bootstrap: bootstrap-docker bootstrap-tf ## Bootstrap the environment
 
 .PHONY: bootstrap-docker
-bootstrap-docker: start-docker-desktop create-docker-context ## Bootstrap the Docker environment
+bootstrap-docker: start-docker-desktop wait-for-docker create-docker-context ## Bootstrap the Docker environment
 
 .PHONY: bootstrap-tf
 bootstrap-tf: bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
@@ -66,9 +66,7 @@ start-docker-desktop: ## Start the Docker Desktop process
 			;; \
 	esac
 
-	@$(MAKE) -s wait-for-docker
-
-.PHONE: wait-for-docker
+.PHONY: wait-for-docker
 wait-for-docker: ## Wait for the docker command to be come available
 	@echo "Waiting for Docker Desktop to start..."
 	@while ! docker info > /dev/null 2>&1; do \
