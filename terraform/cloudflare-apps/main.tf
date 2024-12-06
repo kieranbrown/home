@@ -25,11 +25,40 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
   }
 }
 
-resource "cloudflare_record" "this" {
-  for_each = {
+resource "cloudflare_zero_trust_access_policy" "allow" {
+  account_id = data.cloudflare_zone.this.account_id
+
+  name = "allow"
+  decision = "allow"
+
+  include {
+    email = ["kari96jones@gmail.com", "kswb96@gmail.com"]
+  }
+}
+
+locals {
+  applications = {
     for ingress_rule in cloudflare_zero_trust_tunnel_cloudflared_config.this.config[0].ingress_rule : ingress_rule.hostname => ingress_rule
     if endswith(coalesce(ingress_rule.hostname, "$"), data.cloudflare_zone.this.name)
   }
+}
+
+resource "cloudflare_zero_trust_access_application" "this" {
+  for_each = local.applications
+
+  account_id = data.cloudflare_zone.this.account_id
+
+  name   = each.key
+  domain = each.key
+  policies = [cloudflare_zero_trust_access_policy.allow.id]
+
+  allowed_idps = [data.cloudflare_zero_trust_access_identity_provider.this.id]
+
+  auto_redirect_to_identity = true
+}
+
+resource "cloudflare_record" "this" {
+  for_each = local.applications
 
   zone_id = data.cloudflare_zone.this.zone_id
 
@@ -38,4 +67,6 @@ resource "cloudflare_record" "this" {
   content = cloudflare_zero_trust_tunnel_cloudflared.this.cname
 
   proxied = true
+
+  depends_on = [cloudflare_zero_trust_access_application.this]
 }
