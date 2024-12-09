@@ -1,6 +1,7 @@
 export DOCKER_CONTEXT := pi
 
 DASHLANE_TFSTATE_ID := 246CBCB3-BA34-4369-8BD4-D43DCD8F57BC
+MAKEFLAGS += --no-print-directory
 SSH_HOST := pi@192.168.1.2
 
 #
@@ -36,7 +37,7 @@ sync-config: ## Sync the config folder to the remote host
 #--------------------------------------------------------------------------
 #
 .PHONY: bootstrap
-bootstrap: bootstrap-docker bootstrap-tf ## Bootstrap the environment
+bootstrap: bootstrap-docker bootstrap-tf bootstrap-env ## Bootstrap the environment
 
 .PHONY: bootstrap-docker
 bootstrap-docker: start-docker-desktop wait-for-docker create-docker-context ## Bootstrap the Docker environment
@@ -49,11 +50,10 @@ bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform worksp
 	@dcli sync
 	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-apps/provider.auto.tfvars
 	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
-	@$(MAKE) bootstrap-env
 
 .PHONY: bootstrap-env
 bootstrap-env: ## Bootstrap the environment variables file
-	touch .env
+	@touch .env
 	@$(MAKE) set-env KEY=CLOUDFLARED_TUNNEL_TOKEN VALUE=$$(terraform -chdir=terraform/cloudflare-apps output -raw tunnel_token)
 
 #
@@ -93,7 +93,7 @@ create-docker-context: ## Create the Docker context to communicate with the Rasp
 .PHONY: set-env
 set-env:
 	@if grep -q "^$(KEY)=" .env; then \
-		sed -i '' "s|^$(KEY)=.*|$(KEY)=$(VALUE)|" .env; \
+		sed -i.bak "s|^$(KEY)=.*|$(KEY)=$(VALUE)|" .env && rm -f .env.bak; \
 	else \
 		echo "$(KEY)=$(VALUE)" >> .env; \
 	fi
