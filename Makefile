@@ -1,6 +1,7 @@
 export DOCKER_CONTEXT := pi
 
-DASHLANE_TFSTATE_ID = 246CBCB3-BA34-4369-8BD4-D43DCD8F57BC
+DASHLANE_TFSTATE_ID := 246CBCB3-BA34-4369-8BD4-D43DCD8F57BC
+SSH_HOST := pi@192.168.1.2
 
 #
 #--------------------------------------------------------------------------
@@ -17,12 +18,17 @@ help: ## Print this help with list of available commands/targets and their purpo
 #--------------------------------------------------------------------------
 #
 .PHONY: deploy
-deploy-docker: ## Deploy the docker stack
-	@docker compose up -d
+deploy-docker: sync-config ## Deploy the docker stack
+	@docker compose up -d --remove-orphans --force-recreate
 
 .PHONY: deploy
 deploy-terraform: ## Deploy the terraform stack
 	@terraform -chdir=terraform/cloudflare-apps apply
+
+.PHONY: sync-config
+sync-config: ## Sync the config folder to the remote host
+	@rsync --rsync-path="sudo rsync" config/mosquitto/* $(SSH_HOST):/home/pi/docker/mosquitto/config
+	@rsync --rsync-path="sudo rsync" config/zigbee2mqtt/* $(SSH_HOST):/home/pi/docker/zigbee2mqtt/data
 
 #
 #--------------------------------------------------------------------------
@@ -43,7 +49,12 @@ bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform worksp
 	@dcli sync
 	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-apps/provider.auto.tfvars
 	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
-	@echo "TUNNEL_TOKEN=$$(terraform -chdir=terraform/cloudflare-apps output -raw tunnel_token)" > .env
+	@$(MAKE) bootstrap-env
+
+.PHONY: bootstrap-env
+bootstrap-env: ## Bootstrap the environment variables file
+	touch .env
+	@$(MAKE) set-env KEY=CLOUDFLARED_TUNNEL_TOKEN VALUE=$$(terraform -chdir=terraform/cloudflare-apps output -raw tunnel_token)
 
 #
 #--------------------------------------------------------------------------
@@ -69,12 +80,20 @@ start-docker-desktop: ## Start the Docker Desktop process
 .PHONY: wait-for-docker
 wait-for-docker: ## Wait for the docker command to be come available
 	@echo "Waiting for Docker Desktop to start..."
-	@while ! docker info > /dev/null 2>&1; do \
-		echo "Docker is not ready. Retrying in 5 seconds..."; \
+	@while ! timeout 3 docker info > /dev/null 2>&1; do \
+		echo "Docker is not ready or the context is unreachable. Retrying in 5 seconds..."; \
 		sleep 5; \
 	done
 	@echo "Docker Desktop is ready!"
 
 .PHONY: create-docker-context
 create-docker-context: ## Create the Docker context to communicate with the Raspberry Pi
-	@docker context create pi --description "Raspberry Pi" --docker "host=ssh://pi@192.168.1.2" || true
+	@docker context create pi --description "Raspberry Pi" --docker "host=ssh://$(SSH_HOST)" || true
+
+.PHONY: set-env
+set-env:
+	@if grep -q "^$(KEY)=" .env; then \
+		sed -i '' "s|^$(KEY)=.*|$(KEY)=$(VALUE)|" .env; \
+	else \
+		echo "$(KEY)=$(VALUE)" >> .env; \
+	fi
