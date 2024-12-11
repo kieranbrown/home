@@ -20,6 +20,16 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
     }
 
     ingress_rule {
+      hostname = "music.kswb.dev"
+      service  = "http://host.docker.internal:8095"
+    }
+
+    ingress_rule {
+      hostname = "z2m.kswb.dev"
+      service  = "http://zigbee2mqtt:8080"
+    }
+
+    ingress_rule {
       service = "http_status:404"
     }
   }
