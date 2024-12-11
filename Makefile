@@ -18,18 +18,17 @@ help: ## Print this help with list of available commands/targets and their purpo
 ##@ Deploy Commands
 #--------------------------------------------------------------------------
 #
-.PHONY: deploy
+.PHONY: deploy-docker
 deploy-docker: sync-config ## Deploy the docker stack
 	@docker compose up -d --remove-orphans --force-recreate
 
-.PHONY: deploy
+.PHONY: deploy-terraform
 deploy-terraform: ## Deploy the terraform stack
 	@terraform -chdir=terraform/cloudflare-apps apply
 
 .PHONY: sync-config
 sync-config: ## Sync the config folder to the remote host
-	@rsync --rsync-path="sudo rsync" config/mosquitto/* $(SSH_HOST):/home/pi/docker/mosquitto/config
-	@rsync --rsync-path="sudo rsync" config/zigbee2mqtt/* $(SSH_HOST):/home/pi/docker/zigbee2mqtt/data
+	@rsync -a --recursive --rsync-path="sudo rsync" config/ $(SSH_HOST):/home/pi/docker
 
 #
 #--------------------------------------------------------------------------
