@@ -18,13 +18,9 @@ help: ## Print this help with list of available commands/targets and their purpo
 ##@ Deploy Commands
 #--------------------------------------------------------------------------
 #
-.PHONY: deploy-docker
+.PHONY: deploy
 deploy-docker: sync-config ## Deploy the docker stack
 	@docker compose up -d --remove-orphans --force-recreate
-
-.PHONY: deploy-terraform
-deploy-terraform: ## Deploy the terraform stack
-	@terraform -chdir=terraform/cloudflare-apps apply
 
 .PHONY: sync-config
 sync-config: ## Sync the config folder to the remote host
@@ -42,12 +38,20 @@ bootstrap: bootstrap-docker bootstrap-tf bootstrap-env ## Bootstrap the environm
 bootstrap-docker: start-docker-desktop wait-for-docker create-docker-context ## Bootstrap the Docker environment
 
 .PHONY: bootstrap-tf
-bootstrap-tf: bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
+bootstrap-tf: bootstrap-tf-cloudflare-access-settings bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
+
+.PHONY: bootstrap-tf-cloudflare-access-settings
+bootstrap-tf-cloudflare-access-settings: ## Initialize the Cloudflare Access Settings Terraform workspace
+	@dcli sync
+	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-access-settings/provider.auto.tfvars
+	@terraform -chdir=terraform/cloudflare-access-settings init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
 
 .PHONY: bootstrap-tf-cloudflare-apps
 bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform workspace
 	@dcli sync
 	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-apps/provider.auto.tfvars
+	@echo "cloudflare_s3_access_key = \"$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)\"" >> terraform/cloudflare-apps/provider.auto.tfvars
+	@echo "cloudflare_s3_secret_key = \"$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)\"" >> terraform/cloudflare-apps/provider.auto.tfvars
 	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
 
 .PHONY: bootstrap-env

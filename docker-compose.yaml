@@ -1,7 +1,7 @@
 services:
   cloudflared:
     container_name: cloudflared
-    image: cloudflare/cloudflared:2024.11.1
+    image: cloudflare/cloudflared:2024.12.2
     restart: unless-stopped
     command: tunnel run
     environment:
@@ -11,7 +11,7 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:2024.12.1
+    image: ghcr.io/home-assistant/home-assistant:2024.12.5
     restart: unless-stopped
     privileged: true
     network_mode: host
@@ -40,7 +40,7 @@ services:
 
   music-assistant-server:
     container_name: music-assistant-server
-    image: ghcr.io/music-assistant/server:2.3.3
+    image: ghcr.io/music-assistant/server:2.3.4
     restart: unless-stopped
     # Network mode must be set to host for MA to work correctly
     network_mode: host
