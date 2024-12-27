@@ -19,7 +19,7 @@ help: ## Print this help with list of available commands/targets and their purpo
 #--------------------------------------------------------------------------
 #
 .PHONY: deploy
-deploy-docker: sync-config ## Deploy the docker stack
+deploy: sync-config ## Deploy the docker stack
 	@docker compose up -d --remove-orphans --force-recreate
 
 .PHONY: sync-config

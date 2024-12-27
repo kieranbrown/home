@@ -1,0 +1,48 @@
+switch:
+  - platform: template
+    switches:
+      main_hive_receiver_mode:
+        value_template: "{{ is_state('climate.main_hive_receiver','heat') }}"
+        turn_on:
+          service: mqtt.publish
+          data:
+            topic: zigbee2mqtt/Main Hive Receiver/set
+            payload: '{"system_mode":"heat","temperature_setpoint_hold":"1","occupied_heating_setpoint":18}'
+        turn_off:
+          service: mqtt.publish
+          data:
+            topic: zigbee2mqtt/Main Hive Receiver/set
+            payload: '{"system_mode":"off","temperature_setpoint_hold":"0"}'
+        icon_template: >
+          {% if is_state('climate.main_hive_receiver','heat') %}
+            mdi:fire
+          {% elif is_state('climate.main_hive_receiver','off') %}
+            mdi:power
+          {% else %}
+            mdi:alert
+          {% endif %}
+
+automation:
+  - id: main_hive_thermostat_auto_fix
+    alias: Main Hive Thermostat Auto Fix
+    description: Switches auto mode to heat mode. Maintains HA schedule rather than Hive schedule
+    mode: single
+    trigger:
+      - trigger: state
+        entity_id: climate.main_hive_receiver
+        to: heat
+      - trigger: state
+        entity_id: switch.main_hive_receiver_temperature_setpoint_hold
+        to: 'off'
+    condition:
+      - condition: state
+        entity_id: climate.main_hive_receiver
+        state: heat
+      - condition: state
+        entity_id: switch.main_hive_receiver_temperature_setpoint_hold
+        state: 'off'
+    action:
+      - action: mqtt.publish
+        data:
+            topic: zigbee2mqtt/Main Hive Receiver/set
+            payload: '{"system_mode":"heat","temperature_setpoint_hold":"1"}'
