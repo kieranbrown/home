@@ -38,16 +38,16 @@ resource "cloudflare_zero_trust_gateway_settings" "this" {
 
     settings_by_rule_type {
       dns {
-        log_all    = false
-        log_blocks = false
+        log_all    = true
+        log_blocks = true
       }
       http {
-        log_all    = false
-        log_blocks = false
+        log_all    = true
+        log_blocks = true
       }
       l4 {
-        log_all    = false
-        log_blocks = false
+        log_all    = true
+        log_blocks = true
       }
     }
   }
