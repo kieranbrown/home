@@ -33,6 +33,15 @@ resource "cloudflare_zero_trust_access_policy" "bypass" {
 resource "cloudflare_zero_trust_gateway_settings" "this" {
   account_id = local.account_id
 
+  block_page {
+    enabled          = true
+    background_color = "#ffffff"
+    logo_path        = "https://cdn.buttercms.com/122oVRuQF2nX6lZRxkOz"
+    name             = "Cloudflare DNS"
+    header_text      = "Site Blocked"
+    footer_text      = "This webpage was blocked by a Cloudflare DNS rule"
+  }
+
   logging {
     redact_pii = false
 
@@ -63,7 +72,7 @@ resource "cloudflare_zero_trust_gateway_settings" "this" {
   }
 
   lifecycle {
-    ignore_changes = [ssh_session_log]
+    ignore_changes = [certificate, ssh_session_log]
   }
 }
 
@@ -74,6 +83,7 @@ resource "cloudflare_zero_trust_device_profiles" "default" {
   description = ""
   default     = true
 
+  captive_portal  = 600
   tunnel_protocol = "masque"
 }
 
