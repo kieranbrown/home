@@ -21,8 +21,8 @@ projects:
   - name: &name cloudflare-access-settings
     dir: terraform/cloudflare-access-settings
     workflow: *name
-  - name: &name cloudflare-pages
-    dir: terraform/cloudflare-pages
+  - name: &name cloudflare-apps
+    dir: terraform/cloudflare-apps
     workflow: *name
     depends_on: [cloudflare-access-settings]
 
@@ -35,7 +35,7 @@ workflows:
           value_from: CLOUDFLARE_API_TOKEN
       commands: *env_vars
 
-  cloudflare-pages:
+  cloudflare-apps:
     <<: *workflow
     env_vars:
       state: &env_vars
