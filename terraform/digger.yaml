@@ -1,0 +1,48 @@
+auto_merge: true
+telemetry: false
+
+x-common-variables:
+  workflow: &workflow
+    plan:
+      steps:
+        - &init
+          init:
+          extra_args:
+            - -backend-config=access_key=$CLOUDFLARE_S3_ACCESS_KEY
+            - -backend-config=secret_key=$CLOUDFLARE_S3_SECRET_KEY
+            - -reconfigure
+        - plan
+    apply:
+      steps:
+        - *init
+        - apply
+
+projects:
+  - name: &name cloudflare-access-settings
+    dir: terraform/cloudflare-access-settings
+    workflow: *name
+  - name: &name cloudflare-apps
+    dir: terraform/cloudflare-apps
+    workflow: *name
+    depends_on: [cloudflare-access-settings]
+
+workflows:
+  cloudflare-access-settings:
+    <<: *workflow
+    env_vars:
+      state: &env_vars
+        - name: TF_VAR_cloudflare_api_token
+          value_from: CLOUDFLARE_API_TOKEN
+      commands: *env_vars
+
+  cloudflare-apps:
+    <<: *workflow
+    env_vars:
+      state: &env_vars
+        - name: TF_VAR_cloudflare_api_token
+          value_from: CLOUDFLARE_API_TOKEN
+        - name: TF_VAR_cloudflare_s3_access_key
+          value_from: CLOUDFLARE_S3_ACCESS_KEY
+        - name: TF_VAR_cloudflare_s3_secret_key
+          value_from: CLOUDFLARE_S3_SECRET_KEY
+      commands: *env_vars
