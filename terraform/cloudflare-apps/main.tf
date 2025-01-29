@@ -1,26 +1,42 @@
 locals {
   account_id = data.cloudflare_zone.this.account_id
+  cf_access_state = data.terraform_remote_state.cloudflare_access_settings.outputs
 
-  applications = [
-    {
+  applications = {
+    aiostreams_public = {
+      name         = "AIOStreams (Public Rate Limit)"
+      logo         = "https://www.stremio.com/website/stremio-logo-small.png"
+      hostname     = "aiostreams.kswb.dev"
+      service      = "http://aiostreams:3000"
+      paths        = ["/*/stream/movie/*.json", "/*/stream/series/*.json", "/manifest.json", "/*/manifest.json"]
+      is_public    = true
+      app_launcher = false
+    },
+    aiostreams = {
+      name     = "AIOStreams"
+      logo     = "https://www.stremio.com/website/stremio-logo-small.png"
+      hostname = "aiostreams.kswb.dev"
+      service  = "http://aiostreams:3000"
+    },
+    home_assistant = {
       name     = "Home Assistant"
       logo     = "https://community-assets.home-assistant.io/original/4X/1/3/8/13882a481a57f91f670def0fc33cf99d09dec293.png"
       hostname = "home.kswb.dev"
       service  = "http://host.docker.internal:8123"
     },
-    {
+    music_assistant = {
       name     = "Music Assistant"
       logo     = "https://avatars.githubusercontent.com/u/71128003?s=200&v=4"
       hostname = "music.kswb.dev"
       service  = "http://host.docker.internal:8095"
     },
-    {
+    z2m = {
       name     = "Zigbee2MQTT"
       logo     = "https://www.zigbee2mqtt.io/logo.png"
       hostname = "z2m.kswb.dev"
       service  = "http://zigbee2mqtt:8080"
     },
-  ]
+  }
 }
 
 resource "random_bytes" "tunnel_secret" {
@@ -60,7 +76,7 @@ resource "cloudflare_zero_trust_split_tunnel" "this" {
   mode = "include"
 
   dynamic "tunnels" {
-    for_each = concat(local.applications[*].hostname, ["kieranbrown.cloudflareaccess.com"])
+    for_each = distinct(concat(values(local.applications)[*].hostname, ["kieranbrown.cloudflareaccess.com"]))
 
     content {
       host = tunnels.value
@@ -69,20 +85,29 @@ resource "cloudflare_zero_trust_split_tunnel" "this" {
 }
 
 resource "cloudflare_zero_trust_access_application" "this" {
-  for_each = { for app in local.applications : app.hostname => app }
+  for_each = local.applications
 
   account_id = local.account_id
 
   name     = each.value.name
-  domain   = each.value.hostname
   logo_url = each.value.logo
 
-  policies = [
-    data.terraform_remote_state.cloudflare_access_settings.outputs.app_policy_allow_id,
-    data.terraform_remote_state.cloudflare_access_settings.outputs.app_policy_bypass_id,
+  dynamic "destinations" {
+    for_each = try(each.value.paths, [""])
+
+    content {
+      uri = "${each.value.hostname}${destinations.value}"
+    }
+  }
+
+  policies = try(each.value.is_public, false) ? [local.cf_access_state.app_policy_public_id] : [
+    local.cf_access_state.app_policy_allow_id,
+    local.cf_access_state.app_policy_bypass_id,
   ]
 
-  allowed_idps = [data.terraform_remote_state.cloudflare_access_settings.outputs.idp_google_id]
+  app_launcher_visible = try(each.value.app_launcher, true)
+
+  allowed_idps = [local.cf_access_state.idp_google_id]
 
   auto_redirect_to_identity = true
 
@@ -93,10 +118,10 @@ resource "cloudflare_zero_trust_access_application" "this" {
 }
 
 resource "cloudflare_record" "this" {
-  for_each = {
-    for app in local.applications : app.hostname => app
+  for_each = toset([
+    for key, app in local.applications : app.hostname
     if endswith(coalesce(app.hostname, "$"), data.cloudflare_zone.this.name)
-  }
+  ])
 
   zone_id = data.cloudflare_zone.this.zone_id
 
@@ -107,4 +132,76 @@ resource "cloudflare_record" "this" {
   proxied = true
 
   depends_on = [cloudflare_zero_trust_access_application.this]
+}
+
+resource "cloudflare_ruleset" "http_request_firewall_custom" {
+  zone_id = data.cloudflare_zone.this.zone_id
+
+  name  = "Custom Firewall Ruleset"
+  phase = "http_request_firewall_custom"
+  kind  = "zone"
+
+  rules {
+    description = "AIOStreams"
+    expression  = "(http.host eq \"aiostreams.kswb.dev\") and (\n  (http.request.uri.path contains \"/stream/movie/\" and ends_with(http.request.uri.path, \".json\")) or\n  (http.request.uri.path contains \"/stream/series/\" and ends_with(http.request.uri.path, \".json\")) or\n  ends_with(http.request.uri.path, \"/manifest.json\")\n)"
+    action      = "skip"
+
+    action_parameters {
+      ruleset = "current" # stop processing further rules
+    }
+
+    logging {
+      enabled = true
+    }
+  }
+
+  rules {
+    description = "Identity Protected"
+    expression  = "http.host in {${ join(" ", distinct([ for app in local.applications : "\"${app.hostname}\"" ])) }}"
+    action      = "skip"
+
+    action_parameters {
+      phases = ["http_ratelimit"]
+    }
+
+    logging {
+      enabled = true
+    }
+  }
+}
+
+resource "cloudflare_ruleset" "http_request_cache_settings" {
+  zone_id = data.cloudflare_zone.this.zone_id
+
+  name  = "Cache Configuration Ruleset"
+  phase = "http_request_cache_settings"
+  kind  = "zone"
+
+  rules {
+    description = "AIOStreams"
+    expression  = "(http.host eq \"aiostreams.kswb.dev\" and (starts_with(http.request.uri.path, \"/_next/static/\") or http.request.uri.path in {\"/assets/logo.png\" \"/icon.ico\"}))"
+    action      = "set_cache_settings"
+
+    action_parameters {
+      cache = true
+
+      browser_ttl {
+        default = 31536000
+        mode    = "override_origin"
+      }
+
+      cache_key {
+        ignore_query_strings_order = true
+      }
+
+      edge_ttl {
+        default = 31536000
+        mode    = "override_origin"
+      }
+
+      serve_stale {
+        disable_stale_while_updating = true
+      }
+    }
+  }
 }

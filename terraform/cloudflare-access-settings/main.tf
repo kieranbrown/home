@@ -30,6 +30,19 @@ resource "cloudflare_zero_trust_access_policy" "bypass" {
   }
 }
 
+resource "cloudflare_zero_trust_access_policy" "public" {
+  account_id = local.account_id
+
+  name = "public"
+  decision = "bypass"
+
+  session_duration = "0s"
+
+  include {
+    everyone = true
+  }
+}
+
 resource "cloudflare_zero_trust_gateway_settings" "this" {
   account_id = local.account_id
 
