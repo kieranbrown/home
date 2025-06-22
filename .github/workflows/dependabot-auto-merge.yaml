@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  autoupdate:
+  auto-merge:
     uses: kieranbrown/github-actions/.github/workflows/dependabot-auto-merge.yaml@v1
     permissions:
       contents: write
