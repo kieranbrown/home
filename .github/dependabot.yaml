@@ -24,3 +24,15 @@ updates:
         update-types:
           - minor
           - patch
+
+  - package-ecosystem: terraform
+    directories:
+      - "/terraform/**"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      terraform:
+        update-types:
+          - minor
+          - patch
