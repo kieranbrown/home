@@ -1,0 +1,19 @@
+name: Actionlint
+
+on:
+  workflow_dispatch:
+  pull_request:
+      paths:
+        - '.github/actions/**/*'
+        - '.github/workflows/**/*'
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check workflow files
+        uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
