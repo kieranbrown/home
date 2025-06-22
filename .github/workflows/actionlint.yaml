@@ -3,9 +3,9 @@ name: Actionlint
 on:
   workflow_dispatch:
   pull_request:
-      paths:
-        - '.github/actions/**/*'
-        - '.github/workflows/**/*'
+    paths:
+      - '.github/actions/**/*'
+      - '.github/workflows/**/*'
 
 jobs:
   actionlint:
