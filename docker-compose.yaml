@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.2.0
+    image: ghcr.io/viren070/aiostreams:v2.2.1
     restart: unless-stopped
     environment:
       DISABLE_RATE_LIMITS: true
