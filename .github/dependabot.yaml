@@ -2,7 +2,7 @@ version: 2
 
 updates:
   - package-ecosystem: docker-compose
-    directory: "/"
+    directory: /
     schedule:
       interval: weekly
       day: monday
@@ -14,8 +14,8 @@ updates:
 
   - package-ecosystem: github-actions
     directories:
-      - "/"
-      - "/.github/actions/**"
+      - /
+      - /.github/actions/**
     schedule:
       interval: weekly
       day: monday
@@ -27,7 +27,7 @@ updates:
 
   - package-ecosystem: terraform
     directories:
-      - "/terraform/**"
+      - /terraform/**
     schedule:
       interval: weekly
       day: monday
