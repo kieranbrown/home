@@ -8,7 +8,7 @@ locals {
       logo         = "https://www.stremio.com/website/stremio-logo-small.png"
       hostname     = "aiostreams.kswb.dev"
       service      = "http://aiostreams:3000"
-      paths        = ["/*/stream/movie/*.json", "/*/stream/series/*.json", "/manifest.json", "/*/manifest.json"]
+      paths        = ["/*/*/movie/*.json", "/*/*/series/*.json", "/manifest.json", "/*/manifest.json"]
       is_public    = true
       app_launcher = false
     },
