@@ -9,5 +9,6 @@ jobs:
   autoupdate:
     uses: kieranbrown/github-actions/.github/workflows/pre-commit-autoupdate.yaml@v1
     permissions:
+      actions: write
       contents: write
       pull-requests: write
