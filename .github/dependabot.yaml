@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: weekly
       day: saturday
-      time: 05:00
+      time: "05:00"
       timezone: Europe/London
     groups:
       docker:
@@ -21,7 +21,7 @@ updates:
     schedule:
       interval: weekly
       day: saturday
-      time: 05:00
+      time: "05:00"
       timezone: Europe/London
     groups:
       gha:
@@ -35,7 +35,7 @@ updates:
     schedule:
       interval: weekly
       day: saturday
-      time: 05:00
+      time: "05:00"
       timezone: Europe/London
     groups:
       terraform:
