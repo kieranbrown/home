@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.4.2
+    image: ghcr.io/viren070/aiostreams:v2.5.1
     restart: unless-stopped
     environment:
       DISABLE_RATE_LIMITS: true
@@ -18,7 +18,7 @@ services:
 
   cloudflared:
     container_name: cloudflared
-    image: cloudflare/cloudflared:2025.6.1
+    image: cloudflare/cloudflared:2025.7.0
     restart: unless-stopped
     command: tunnel run
     environment:
@@ -36,7 +36,7 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:2025.6.3
+    image: ghcr.io/home-assistant/home-assistant:2025.7.1
     restart: unless-stopped
     privileged: true
     network_mode: host
@@ -84,7 +84,7 @@ services:
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: ghcr.io/koenkk/zigbee2mqtt:2.4.0
+    image: ghcr.io/koenkk/zigbee2mqtt:2.5.1
     restart: unless-stopped
     volumes:
       - /home/pi/docker/zigbee2mqtt/data:/app/data
