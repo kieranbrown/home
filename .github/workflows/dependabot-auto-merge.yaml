@@ -2,6 +2,11 @@ name: Dependabot auto-merge
 
 on:
   pull_request:
+    paths:
+      - '.github/actions/**/*'
+      - '.github/workflows/**/*'
+      - 'terraform/**/.terraform.lock.hcl'
+      - 'docker-compose.yaml'
 
 jobs:
   auto-merge:
