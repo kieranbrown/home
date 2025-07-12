@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.5.1
+    image: ghcr.io/viren070/aiostreams:v2.5.2
     restart: unless-stopped
     environment:
       DISABLE_RATE_LIMITS: true
@@ -47,7 +47,7 @@ services:
 
   mosquitto:
     container_name: mosquitto
-    image: eclipse-mosquitto:2.0.21
+    image: eclipse-mosquitto:2.0.22
     restart: unless-stopped
     ports:
         - 1883:1883
