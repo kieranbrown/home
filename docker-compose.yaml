@@ -4,6 +4,7 @@ services:
     image: ghcr.io/viren070/aiostreams:v2.10.0
     restart: unless-stopped
     environment:
+      BASE_URL: https://aiostreams.kswb.dev
       DISABLE_RATE_LIMITS: true
       REGEX_FILTER_ACCESS: all
       SECRET_KEY: $AIOSTREAMS_SECRET_KEY
