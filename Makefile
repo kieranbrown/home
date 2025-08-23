@@ -1,6 +1,6 @@
 export DOCKER_CONTEXT := pi
+export OP_ACCOUNT := my.1password.com
 
-DASHLANE_TFSTATE_ID := 246CBCB3-BA34-4369-8BD4-D43DCD8F57BC
 MAKEFLAGS += --no-print-directory
 SSH_HOST := pi@192.168.1.2
 
@@ -42,17 +42,15 @@ bootstrap-tf: bootstrap-tf-cloudflare-access-settings bootstrap-tf-cloudflare-ap
 
 .PHONY: bootstrap-tf-cloudflare-access-settings
 bootstrap-tf-cloudflare-access-settings: ## Initialize the Cloudflare Access Settings Terraform workspace
-	@dcli sync
-	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-access-settings/provider.auto.tfvars
-	@terraform -chdir=terraform/cloudflare-access-settings init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
+	@echo "cloudflare_api_token = \"$$(op read 'op://Private/cloudflare.com/Tokens/Home')\"" > terraform/cloudflare-access-settings/provider.auto.tfvars
+	@terraform -chdir=terraform/cloudflare-access-settings init -reconfigure -backend-config access_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Access Key')" -backend-config secret_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Secret Key')"
 
 .PHONY: bootstrap-tf-cloudflare-apps
 bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform workspace
-	@dcli sync
-	@echo "cloudflare_api_token = \"$$(dcli read dl://cloudflare_api_token/content)\"" > terraform/cloudflare-apps/provider.auto.tfvars
-	@echo "cloudflare_s3_access_key = \"$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)\"" >> terraform/cloudflare-apps/provider.auto.tfvars
-	@echo "cloudflare_s3_secret_key = \"$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)\"" >> terraform/cloudflare-apps/provider.auto.tfvars
-	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_access_key)" -backend-config secret_key="$$(dcli read dl://$(DASHLANE_TFSTATE_ID)/content?json=cloudflare_s3_secret_key)"
+	@echo "cloudflare_api_token = \"$$(op read 'op://Private/cloudflare.com/Tokens/Home')\"" > terraform/cloudflare-apps/provider.auto.tfvars
+	@echo "cloudflare_s3_access_key = \"$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Access Key')\"" >> terraform/cloudflare-apps/provider.auto.tfvars
+	@echo "cloudflare_s3_secret_key = \"$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Secret Key')\"" >> terraform/cloudflare-apps/provider.auto.tfvars
+	@terraform -chdir=terraform/cloudflare-apps init -reconfigure -backend-config access_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Access Key')" -backend-config secret_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Secret Key')"
 
 .PHONY: bootstrap-env
 bootstrap-env: ## Bootstrap the environment variables file
