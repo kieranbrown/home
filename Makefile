@@ -1,4 +1,3 @@
-export DOCKER_CONTEXT := pi
 export OP_ACCOUNT := my.1password.com
 
 MAKEFLAGS += --no-print-directory
@@ -6,21 +5,12 @@ SSH_HOST := pi@192.168.1.2
 
 #
 #--------------------------------------------------------------------------
-##@ Help
-#--------------------------------------------------------------------------
-#
-.PHONY: help
-help: ## Print this help with list of available commands/targets and their purpose
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[36m\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } /^##~ [a-zA-Z_-]+:.*/ { printf "  \033[36m%-15s\033[0m %s\n", substr($$1, 5), $$2 }' $(MAKEFILE_LIST)
-
-#
-#--------------------------------------------------------------------------
 ##@ Deploy Commands
 #--------------------------------------------------------------------------
 #
 .PHONY: deploy
-deploy: sync-config ## Deploy the docker stack
-	@docker compose up -d --remove-orphans --force-recreate
+deploy: bootstrap-env sync-config ## Deploy the docker stack
+	@DOCKER_HOST=ssh://$(SSH_HOST) docker compose up -d --remove-orphans --force-recreate
 
 .PHONY: sync-config
 sync-config: ## Sync the config folder to the remote host
@@ -35,18 +25,18 @@ sync-config: ## Sync the config folder to the remote host
 bootstrap: bootstrap-docker bootstrap-tf bootstrap-env ## Bootstrap the environment
 
 .PHONY: bootstrap-docker
-bootstrap-docker: start-docker-desktop wait-for-docker create-docker-context ## Bootstrap the Docker environment
+bootstrap-docker: start-docker-desktop wait-for-docker ## Bootstrap the Docker environment
 
 .PHONY: bootstrap-tf
 bootstrap-tf: bootstrap-tf-cloudflare-access-settings bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
 
 .PHONY: bootstrap-tf-cloudflare-access-settings
-bootstrap-tf-cloudflare-access-settings: ## Initialize the Cloudflare Access Settings Terraform workspace
+bootstrap-tf-cloudflare-access-settings: # Initialize the Cloudflare Access Settings Terraform workspace
 	@echo "cloudflare_api_token = \"$$(op read 'op://Private/cloudflare.com/Tokens/Home')\"" > terraform/cloudflare-access-settings/provider.auto.tfvars
 	@terraform -chdir=terraform/cloudflare-access-settings init -reconfigure -backend-config access_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Access Key')" -backend-config secret_key="$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Secret Key')"
 
 .PHONY: bootstrap-tf-cloudflare-apps
-bootstrap-tf-cloudflare-apps: ## Initialize the Cloudflare Apps Terraform workspace
+bootstrap-tf-cloudflare-apps: # Initialize the Cloudflare Apps Terraform workspace
 	@echo "cloudflare_api_token = \"$$(op read 'op://Private/cloudflare.com/Tokens/Home')\"" > terraform/cloudflare-apps/provider.auto.tfvars
 	@echo "cloudflare_s3_access_key = \"$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Access Key')\"" >> terraform/cloudflare-apps/provider.auto.tfvars
 	@echo "cloudflare_s3_secret_key = \"$$(op read 'op://Private/cloudflare.com/Terraform State Keys/S3 Secret Key')\"" >> terraform/cloudflare-apps/provider.auto.tfvars
@@ -79,17 +69,13 @@ start-docker-desktop: ## Start the Docker Desktop process
 	esac
 
 .PHONY: wait-for-docker
-wait-for-docker: ## Wait for the docker command to be come available
+wait-for-docker: ## Wait for the docker command to become available
 	@echo "Waiting for Docker Desktop to start..."
 	@while ! timeout 3 docker info > /dev/null 2>&1; do \
 		echo "Docker is not ready or the context is unreachable. Retrying in 5 seconds..."; \
 		sleep 5; \
 	done
 	@echo "Docker Desktop is ready!"
-
-.PHONY: create-docker-context
-create-docker-context: ## Create the Docker context to communicate with the Raspberry Pi
-	@docker context create pi --description "Raspberry Pi" --docker "host=ssh://$(SSH_HOST)" || true
 
 .PHONY: set-env
 set-env:
@@ -98,3 +84,13 @@ set-env:
 	else \
 		echo "$(KEY)=$(VALUE)" >> .env; \
 	fi
+
+#
+#--------------------------------------------------------------------------
+## Help
+#--------------------------------------------------------------------------
+#
+.PHONY: help
+.DEFAULT_GOAL := help
+help: # Display this help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[36m\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } /^##~ [a-zA-Z_-]+:.*/ { printf "  \033[36m%-15s\033[0m %s\n", substr($$1, 5), $$2 }' $(MAKEFILE_LIST)
