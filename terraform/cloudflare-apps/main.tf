@@ -30,6 +30,12 @@ locals {
       hostname = "music.kswb.dev"
       service  = "http://host.docker.internal:8095"
     },
+    ssh = {
+      name     = "SSH"
+      logo     = "https://cdn-icons-png.flaticon.com/512/5261/5261867.png"
+      hostname = "ssh.kswb.dev"
+      service  = "ssh://host.docker.internal:22"
+    },
     z2m = {
       name     = "Zigbee2MQTT"
       logo     = "https://www.zigbee2mqtt.io/logo.png"
@@ -68,6 +74,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
       service = "http_status:404"
     }
   }
+
+  lifecycle {
+    ignore_changes = [config[0].warp_routing]
+  }
 }
 
 resource "cloudflare_zero_trust_split_tunnel" "this" {
@@ -90,6 +100,7 @@ resource "cloudflare_zero_trust_access_application" "this" {
   account_id = local.account_id
 
   name     = each.value.name
+  type     = startswith(each.value.service, "ssh://") ? "ssh" : "self_hosted"
   logo_url = each.value.logo
 
   dynamic "destinations" {
@@ -100,10 +111,10 @@ resource "cloudflare_zero_trust_access_application" "this" {
     }
   }
 
-  policies = try(each.value.is_public, false) ? [local.cf_access_state.app_policy_public_id] : [
+  policies = try(each.value.is_public, false) ? [local.cf_access_state.app_policy_public_id] : compact([
     local.cf_access_state.app_policy_allow_id,
-    local.cf_access_state.app_policy_bypass_id,
-  ]
+    startswith(each.value.service, "ssh://") ? null : local.cf_access_state.app_policy_bypass_id,
+  ])
 
   app_launcher_visible = try(each.value.app_launcher, true)
 
@@ -203,5 +214,14 @@ resource "cloudflare_ruleset" "http_request_cache_settings" {
         disable_stale_while_updating = true
       }
     }
+  }
+}
+
+resource "cloudflare_zero_trust_access_short_lived_certificate" "ssh" {
+  account_id     = local.account_id
+  application_id = cloudflare_zero_trust_access_application.this["ssh"].id
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
