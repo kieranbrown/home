@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.16.6
+    image: ghcr.io/viren070/aiostreams:v2.16.7
     restart: unless-stopped
     environment:
       BASE_URL: https://aiostreams.kswb.dev
@@ -19,7 +19,7 @@ services:
 
   cloudflared:
     container_name: cloudflared
-    image: cloudflare/cloudflared:2025.10.1
+    image: cloudflare/cloudflared:2025.11.1
     restart: unless-stopped
     command: tunnel run
     environment:
@@ -37,7 +37,7 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:2025.10.4
+    image: ghcr.io/home-assistant/home-assistant:2025.11.1
     restart: unless-stopped
     privileged: true
     network_mode: host
@@ -66,7 +66,7 @@ services:
 
   music-assistant-server:
     container_name: music-assistant-server
-    image: ghcr.io/music-assistant/server:2.6.1
+    image: ghcr.io/music-assistant/server:2.6.2
     restart: unless-stopped
     # Network mode must be set to host for MA to work correctly
     network_mode: host
@@ -85,7 +85,7 @@ services:
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: ghcr.io/koenkk/zigbee2mqtt:2.6.2
+    image: ghcr.io/koenkk/zigbee2mqtt:2.6.3
     restart: unless-stopped
     volumes:
       - /home/pi/docker/zigbee2mqtt/data:/app/data
