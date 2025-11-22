@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.17.2
+    image: ghcr.io/viren070/aiostreams:v2.17.5
     restart: unless-stopped
     environment:
       BASE_URL: https://aiostreams.kswb.dev
@@ -37,7 +37,7 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:2025.11.2
+    image: ghcr.io/home-assistant/home-assistant:2025.11.3
     restart: unless-stopped
     privileged: true
     network_mode: host
