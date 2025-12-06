@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.17.5
+    image: ghcr.io/viren070/aiostreams:v2.18.1
     restart: unless-stopped
     environment:
       BASE_URL: https://aiostreams.kswb.dev
@@ -37,7 +37,7 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:2025.11.3
+    image: ghcr.io/home-assistant/home-assistant:2025.12.1
     restart: unless-stopped
     privileged: true
     network_mode: host
@@ -85,7 +85,7 @@ services:
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: ghcr.io/koenkk/zigbee2mqtt:2.6.3
+    image: ghcr.io/koenkk/zigbee2mqtt:2.7.0
     restart: unless-stopped
     volumes:
       - /home/pi/docker/zigbee2mqtt/data:/app/data
