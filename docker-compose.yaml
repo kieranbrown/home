@@ -1,7 +1,7 @@
 services:
   aiostreams:
     container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.18.1
+    image: ghcr.io/viren070/aiostreams:v2.19.0
     restart: unless-stopped
     environment:
       BASE_URL: https://aiostreams.kswb.dev
@@ -66,7 +66,7 @@ services:
 
   music-assistant-server:
     container_name: music-assistant-server
-    image: ghcr.io/music-assistant/server:2.7.1
+    image: ghcr.io/music-assistant/server:2.7.2
     restart: unless-stopped
     # Network mode must be set to host for MA to work correctly
     network_mode: host
