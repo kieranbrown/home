@@ -1,22 +1,4 @@
 services:
-  aiostreams:
-    container_name: aiostreams
-    image: ghcr.io/viren070/aiostreams:v2.22.0
-    restart: unless-stopped
-    environment:
-      BASE_URL: https://aiostreams.kswb.dev
-      DISABLE_RATE_LIMITS: true
-      REGEX_FILTER_ACCESS: all
-      SECRET_KEY: $AIOSTREAMS_SECRET_KEY
-    volumes:
-      - /home/pi/docker/aiostreams/data:/app/data
-
-  # bumper:
-  #   container_name: bumper
-  #   image: ghcr.io/mvladislav/bumper:sha-a39a705
-  #   restart: unless-stopped
-  #   platform: linux/arm64
-
   cloudflared:
     container_name: cloudflared
     image: cloudflare/cloudflared:2025.11.1
@@ -26,14 +8,6 @@ services:
       TUNNEL_TOKEN: $CLOUDFLARED_TUNNEL_TOKEN
     extra_hosts:
       - host.docker.internal:host-gateway
-
-  # hcpy:
-  #   container_name: hcpy
-  #   image: ghcr.io/hcpy2-0/hcpy:v0.1.6
-  #   restart: unless-stopped
-  #   command: /app/hc-login.py "$HC_USERNAME" "$HC_PASSWORD" config/devices.json
-  #   volumes:
-  #     - /home/pi/docker/hcpy/config:/app/config
 
   home-assistant:
     container_name: home-assistant

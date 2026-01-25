@@ -3,21 +3,6 @@ locals {
   cf_access_state = data.terraform_remote_state.cloudflare_access_settings.outputs
 
   applications = {
-    aiostreams_public = {
-      name         = "AIOStreams (Public Rate Limit)"
-      logo         = "https://www.stremio.com/website/stremio-logo-small.png"
-      hostname     = "aiostreams.kswb.dev"
-      service      = "http://aiostreams:3000"
-      paths        = ["/*/*/movie/*.json", "/*/*/series/*.json", "/manifest.json", "/*/manifest.json"]
-      is_public    = true
-      app_launcher = false
-    },
-    aiostreams = {
-      name     = "AIOStreams"
-      logo     = "https://www.stremio.com/website/stremio-logo-small.png"
-      hostname = "aiostreams.kswb.dev"
-      service  = "http://aiostreams:3000"
-    },
     home_assistant = {
       name     = "Home Assistant"
       logo     = "https://community-assets.home-assistant.io/original/4X/1/3/8/13882a481a57f91f670def0fc33cf99d09dec293.png"
@@ -143,78 +128,6 @@ resource "cloudflare_record" "this" {
   proxied = true
 
   depends_on = [cloudflare_zero_trust_access_application.this]
-}
-
-resource "cloudflare_ruleset" "http_request_firewall_custom" {
-  zone_id = data.cloudflare_zone.this.zone_id
-
-  name  = "Custom Firewall Ruleset"
-  phase = "http_request_firewall_custom"
-  kind  = "zone"
-
-  rules {
-    description = "AIOStreams"
-    expression  = "(http.host eq \"aiostreams.kswb.dev\") and (\n  (http.request.uri.path contains \"/stream/movie/\" and ends_with(http.request.uri.path, \".json\")) or\n  (http.request.uri.path contains \"/stream/series/\" and ends_with(http.request.uri.path, \".json\")) or\n  ends_with(http.request.uri.path, \"/manifest.json\")\n)"
-    action      = "skip"
-
-    action_parameters {
-      ruleset = "current" # stop processing further rules
-    }
-
-    logging {
-      enabled = true
-    }
-  }
-
-  rules {
-    description = "Identity Protected"
-    expression  = "http.host in {${ join(" ", distinct([ for app in local.applications : "\"${app.hostname}\"" ])) }}"
-    action      = "skip"
-
-    action_parameters {
-      phases = ["http_ratelimit"]
-    }
-
-    logging {
-      enabled = true
-    }
-  }
-}
-
-resource "cloudflare_ruleset" "http_request_cache_settings" {
-  zone_id = data.cloudflare_zone.this.zone_id
-
-  name  = "Cache Configuration Ruleset"
-  phase = "http_request_cache_settings"
-  kind  = "zone"
-
-  rules {
-    description = "AIOStreams"
-    expression  = "(http.host eq \"aiostreams.kswb.dev\" and (starts_with(http.request.uri.path, \"/_next/static/\") or http.request.uri.path in {\"/assets/logo.png\" \"/icon.ico\"}))"
-    action      = "set_cache_settings"
-
-    action_parameters {
-      cache = true
-
-      browser_ttl {
-        default = 31536000
-        mode    = "override_origin"
-      }
-
-      cache_key {
-        ignore_query_strings_order = true
-      }
-
-      edge_ttl {
-        default = 31536000
-        mode    = "override_origin"
-      }
-
-      serve_stale {
-        disable_stale_while_updating = true
-      }
-    }
-  }
 }
 
 resource "cloudflare_zero_trust_access_short_lived_certificate" "ssh" {
