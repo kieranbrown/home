@@ -22,10 +22,7 @@ sync-config: ## Sync the config folder to the remote host
 #--------------------------------------------------------------------------
 #
 .PHONY: bootstrap
-bootstrap: bootstrap-docker bootstrap-tf bootstrap-env ## Bootstrap the environment
-
-.PHONY: bootstrap-docker
-bootstrap-docker: start-docker-desktop wait-for-docker ## Bootstrap the Docker environment
+bootstrap: bootstrap-tf bootstrap-env ## Bootstrap the environment
 
 .PHONY: bootstrap-tf
 bootstrap-tf: bootstrap-tf-cloudflare-access-settings bootstrap-tf-cloudflare-apps ## Initialize the Terraform workspaces
@@ -52,31 +49,6 @@ bootstrap-env: ## Bootstrap the environment variables file
 ##@ Miscellaneous
 #--------------------------------------------------------------------------
 #
-.PHONY: start-docker-desktop
-start-docker-desktop: ## Start the Docker Desktop process
-	@case "$$(uname -sr)" in \
-		Darwin*) \
-			echo "Mac detected. Starting Docker Desktop..."; \
-			open -a Docker; \
-			;; \
-		Linux*WSL*) \
-			echo "WSL detected. Starting Docker Desktop..."; \
-			powershell.exe -Command "Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'"; \
-			;; \
-		*) \
-			echo "Could not detect OS. Please start Docker Desktop manually"; \
-			;; \
-	esac
-
-.PHONY: wait-for-docker
-wait-for-docker: ## Wait for the docker command to become available
-	@echo "Waiting for Docker Desktop to start..."
-	@while ! timeout 3 docker info > /dev/null 2>&1; do \
-		echo "Docker is not ready or the context is unreachable. Retrying in 5 seconds..."; \
-		sleep 5; \
-	done
-	@echo "Docker Desktop is ready!"
-
 .PHONY: set-env
 set-env:
 	@if grep -q "^$(KEY)=" .env; then \

@@ -6,7 +6,7 @@ on:
       - '.github/actions/**/*'
       - '.github/workflows/**/*'
       - 'terraform/**/.terraform.lock.hcl'
-      - 'docker-compose.yaml'
+      - 'compose.yaml'
 
 jobs:
   auto-merge:
